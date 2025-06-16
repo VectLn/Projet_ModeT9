@@ -11,14 +11,12 @@ open Chaines
    Paramètre lettre : char, lettre à coder.
    Résultat : numéro de la touche associée à la lettre. *)
 
-let encoder_lettre code lettre =
-  let rec aux code lettre =
-    match code with
-    |[] -> failwith "Erreur : caractère non reconnu"
-    |(touche, lettres)::queue ->
-      if List.mem lettre lettres then touche
-      else aux queue lettre
-  in aux code lettre
+let rec encoder_lettre code lettre =
+  match code with
+  |[] -> failwith "Erreur : caractère non reconnu"
+  |(touche, lettres)::queue ->
+    if List.mem lettre lettres then touche
+    else encoder_lettre queue lettre
 
 let%test _ = encoder_lettre t9_map 'a' = 2
 let%test _ = encoder_lettre t9_map 'b' = 2
