@@ -1,0 +1,6 @@
+(library
+ (name t9)
+ (inline_tests (deps (source_tree .)))
+ (modules chaines encodage naif intuitive)
+ (preprocess
+  (pps ppx_inline_test)))
