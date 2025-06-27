@@ -4,16 +4,20 @@ open Chaines
 (* Saisie des mots sans le mode T9 *)
 (* Pour marquer le passage d'un caractère à un autre, on utilise la touche 0 *)
 
-(* 
+(* 3 Sans saisie intuitive *)
+
+(* ▷ Exercice 1 Mots → touches *)
+
+(*
   index : char -> char list -> int
-   Fonction qui renvoie l'index du caractère lettre dans la liste liste.
-   Paramètre lettre : char, le caractère à chercher.
-   Paramètre liste_lettres : char list, la liste dans laquelle chercher le caractère.
-   Résultat : un entier, l'index du caractère lettre dans la liste liste.
-   Pré-condition : lettre est une lettre de l'alphabet latin et liste non vide
-   Post-condition :
-   Si lettre est dans liste_lettres, renvoie l'index de lettre dans liste_lettres (commençant à 1).
-   Si lettre n'est pas dans liste_lettres, lève une exception avec le message "Lettre incorrecte".
+  Renvoie la position de la lettre dans la liste.
+  Paramètre lettre : caractère à chercher
+  Paramètre liste_lettres : liste des lettres associées à une touche
+  Résultat : un entier représentant la position de la lettre dans la liste (1 pour le premier, etc.)
+  Pré-conditions : la lettre doit se trouver dans la liste (sinon exception)
+  Post-condition : le résultat est strictement positif et correspond à la position de la première occurrence
+  Exceptions :
+    - lève l'exception Failure "Lettre incorrecte" si la lettre n'est pas trouvée
 *)
 
 let rec index lettre liste_lettres =
@@ -29,15 +33,20 @@ let%test _ = index 'c' ['a';'b';'c'] = 3
 let%test _ = try index 'a' [] = 1 with Invalid_argument "Lettre incorrecte" -> true;;*)
 
 (*
-  EXERCICE 1
-  encoder_lettre : encodage -> char -> (int * int)
-  Indique la touche et le nombre de fois qu’il faut appuyer dessus 
-  pour saisir la lettre passée en paramètre. 
-  Paramètre code : liste associative d'encodage (touche, liste de lettres)
-  Paramètre lettre : char, la lettre à encoder
-  Résultat : renvoie le couple (touche, nombre d'appuis) pour saisir la lettre donnée
-  Pré-conditions : lettre une lettre de l'alphabet latine et liste non vide
-  Post-condition : si lettre est dans la liste, renvoie le couple (touche, index de lettre dans la liste)
+  encoder_lettre : (int * char list) list -> char -> (int * int)
+  Indique la touche et le nombre d’appuis nécessaires pour saisir une lettre.
+  Paramètre code : encodage, une liste associative (touche, lettres associées)
+  Paramètre lettre : caractère à encoder
+  Résultat : un couple (numéro de touche, nombre d’appuis nécessaires)
+  Pré-conditions : 
+    - La lettre doit apparaître au moins une fois dans les listes de l'encodage
+    - L'encodage doit être bien formé (pas de touches dupliquées inutilement)
+  Post-condition : 
+    - Le couple retourné correspond à la première association trouvée
+    - Le nombre d’appuis est ≥ 1
+  Exceptions :
+    - lève Failure "Liste encodage incorrecte" si la lettre n’est dans aucune des sous-listes
+    - lève Failure "Lettre incorrecte" si l’appel à index échoue
 *)
 
 let rec encoder_lettre code lettre =
@@ -55,14 +64,18 @@ let%test _ = encoder_lettre [(2,['a';'b';'c']) ; (3,['d';'e';'f'])] 'd' = (3,1)
 let%test _ = try encoder_lettre [] 'a' = (2,1) with Invalid_argument "Liste encodage incorrecte" -> true;;*)
 
 (*
-  EXERCICE 1
-  encoder_mot : encode -> string -> int list
-  Calcule la suite de touches à presser pour saisir un mot passé en paramètre.
-  Paramètre code : liste associative d'encodage (touche, liste de lettres)
-  Paramètre mot : mot à encoder
-  Résultat : une liste d'entiers représentant les touches à presser pour saisir le mot
-  Pré-conditions : mot non vide et code non vide
-  Post-condition : renvoie la liste des touches à presser pour saisir le mot
+  sequence_encoder_lettre : (int * char list) list -> char -> int list
+  Encode une lettre sous forme d’une séquence de pressions de touches.
+  Paramètre code : liste associative représentant l'encodage (touche, liste de lettres)
+  Paramètre lettre : caractère à encoder
+  Résultat : liste d’entiers représentant les pressions nécessaires, suivie de 0 (pause)
+  Pré-conditions :
+    - La lettre doit être présente dans le code
+  Post-condition :
+    - La longueur de la liste est égale au nombre d’appuis + 1 (pour la pause)
+    - Tous les éléments sauf le dernier sont égaux à la touche correspondante
+  Exceptions :
+    - Propagation de toutes les exceptions levées par encoder_lettre (Failure ...)
 *)
 
 let sequence_encoder_lettre code lettre =
@@ -74,6 +87,22 @@ let%test _ = sequence_encoder_lettre t9_map 'c' = [2; 2; 2; 0]
 let%test _ = sequence_encoder_lettre stupide_map 'e' = [2; 2; 0]
 let%test _ = sequence_encoder_lettre [(2,['a';'b';'c'])] 'b' = [2; 2; 0]
 
+(*
+  encoder_mot : (int * char list) list -> string -> int list
+  Encode un mot entier en séquence de pressions sur les touches.
+  Paramètre code : encodage, une liste associative (touche, lettres associées)
+  Paramètre mot : chaîne de caractères à encoder
+  Résultat : liste d’entiers représentant la séquence complète de pressions avec les pauses
+  Pré-conditions :
+    - Tous les caractères du mot doivent être encodables selon le code donné
+    - Le mot est une chaîne de lettres uniquement (pas de chiffres ou ponctuations)
+  Post-condition :
+    - La concaténation des séquences pour chaque lettre avec `0` en séparateur est respectée
+  Exceptions :
+    - lève Failure "Lettre incorrecte" ou "Liste encodage incorrecte" si une lettre ne peut pas être encodée
+    - propagées depuis sequence_encoder_lettre
+*)
+
 let rec encoder_mot code mot =
   match mot with
   | "" -> []
@@ -82,7 +111,7 @@ let rec encoder_mot code mot =
          (sequence_encoder_lettre code lettre) @ (encoder_mot code sous_mot)
 
 let%test _ = encoder_mot t9_map "bonjour" = [2;2;0;6;6;6;0;6;6;0;5;0;6;6;6;0;8;8;0;7;7;7;0]
-let%test _ = encoder_mot [(2,['a';'b';'c'])] "abc" = [2; 0; 2; 2; 0; 2; 2; 2; 0]
+let%test _ = encoder_mot stupide_map "abc" = [2; 0; 3; 0; 3; 3; 0]
 let%test _ = encoder_mot [(2,['a';'b';'c']) ; (3,['d';'e';'f'])] "def" = [3; 0; 3; 3; 0; 3; 3; 3; 0]
 (*let%test _ = try encoder_mot t9_map "abc" = [] with Invalid_argument "Mot incorrect" -> true;;
 let%test _ = try encoder_mot t9_map "" = [] with Invalid_argument "Mot incorrect" -> true;;
@@ -90,86 +119,46 @@ let%test _ = try encoder_mot [] "abc" = [] with Invalid_argument "Liste encodage
 
 
 
+(*-----------------------------------------------------------------------------------------------*)
 
 
 
+(*▷ Exercice 2 Touches → mot*)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-(* Exception correspondant à une saisie qui ne correspond à aucune lettre dans l'encodage utilisé.
-
-Exemple : la saisie de 2 2 2 2 0 ne correspond à aucune lettre de t9_map
-
+(* 
+  Exception correspondant à une saisie qui ne correspond à aucune lettre dans l'encodage utilisé.
+  Exemple : la saisie de 2 2 2 2 0 ne correspond à aucune lettre de t9_map
 *)
+
 exception LettreNonTrouve
 
-
-
-(* Exception qui est levée quand il manque des zéros dans une suite de touches pour décrire un mot.
-
-Exemple : la suite de touche 2 2 2 3 3 0 ou 2 2 2 0 3 3 ( la suite valide serait 2 2 2 0 3 3 0)
+(* 
+  Exception qui est levée quand il manque des zéros dans une suite de touches pour décrire un mot.
+  Exemple : la suite de touche 2 2 2 3 3 0 ou 2 2 2 0 3 3 ( la suite valide serait 2 2 2 0 3 3 0)
 *)
+
 exception PauseManquante
 
-(* Exception qui est levée quand il y a deux zéros successifs dans une suite de touches pour décrire mot.
-
-Exemple : la suite de touche 2 2 0 0
+(* 
+  Exception qui est levée quand il y a deux zéros successifs dans une suite de touches pour décrire mot.
+  Exemple : la suite de touche 2 2 0 0
 *)
+
 exception DoublePause
 
-
-
-(* Saisie des mots sans le mode T9 *)
-(* Pour marquer le passage d'un caractère à un autre, on utilise la touche 0 *)
-
-
 (*
-Récuperer le k-ième élément d'une liste
-
-Param:
-  k: l'indice de l'élément à récuperer.
-  l: la liste
-
-Retourne: 
-  Le k-ième élément.
-Preconditions:
-  La liste a au moins k elements
+  get_kth_element : int -> 'a list -> 'a
+  Récupère le k-ième élément d'une liste.
+  Paramètre k : indice de l’élément à récupérer (1 pour le premier)
+  Paramètre l : liste dans laquelle on cherche l’élément
+  Résultat : l’élément à la position k
+  Pré-conditions : 
+    - k ≥ 1
+    - la liste contient au moins k éléments
+  Post-condition : 
+    - L’élément retourné est celui à la position k
+  Exceptions :
+    - Lève Not_found si la liste a moins de k éléments
 *)
 
 let rec get_kth_element k l = 
@@ -177,32 +166,27 @@ let rec get_kth_element k l =
   |[] -> raise Not_found
   |t::q -> if (k=1) then t else get_kth_element (k-1) q
 
-
 let%test _ = get_kth_element 3 [11; -3; 10] = 10
 let%test _ = get_kth_element 1 [11; -3; 10] = 11
 let%test _ = get_kth_element 2 [11; -3; 10] = -3
 let%test _ = try get_kth_element 4 [1; 2; 4] = -1 with Not_found -> true;;
 
-
 (*
-Identifie la lettre saisie à partir d’une touche et du nombre de fois qu’elle a été
-pressée.
-
-Param:
-  encodage: liste associative, aux touches associe les lettres dans l'ordre.
-  saisie: couple d'entier, le premier indique la touche saisie et le second le nombre
-          de fois qu'elle a été saisie
-Retourne:
-  La lettre décodée.
-Pre-condition: 
-  o La touche (fst saisie) fait partie des touches utilisées par l'encodeur.
-  o L'encodage n'est pas une liste vide
-Post-condition: le nombre de fois que la touche est pressée n'est pas plus grand que le
-  nombre de lettre associée à la touche.
-Exception:
-  Lève LettreNonTrouve si la saisie ne correspond à aucune lettre dans encodage.
-
+  decoder_lettre : (int * char list) list -> (int * int) -> char
+  Identifie la lettre à partir d’une touche et du nombre de pressions.
+  Paramètre encodage : liste associative (touche, liste de lettres associées)
+  Paramètre saisie : couple (touche, nombre de pressions effectuées)
+  Résultat : la lettre correspondante à cette saisie
+  Pré-conditions :
+    - La touche doit exister dans l’encodage
+    - Le nombre de pressions est ≥ 1 et ≤ nombre de lettres associées à cette touche
+    - L'encodage n’est pas vide
+  Post-condition :
+    - Retourne la lettre à la (snd saisie)-ième position dans la liste associée à la touche
+  Exceptions :
+    - Lève LettreNonTrouve si la touche est absente ou le nombre d’appuis dépasse la liste
 *)
+
 let rec decoder_lettre encodage saisie = 
   match encodage with
   |[] -> raise LettreNonTrouve
@@ -211,7 +195,6 @@ let rec decoder_lettre encodage saisie =
       try get_kth_element (snd saisie) lettres
       with Not_found -> raise LettreNonTrouve
     else decoder_lettre q saisie
-
 
 let%test _ = decoder_lettre t9_map (2, 1) = 'a'
 let%test _ = decoder_lettre t9_map (3, 3) = 'f'
@@ -226,60 +209,48 @@ let%test _ = try decoder_lettre t9_map (10, 3) = '*' with LettreNonTrouve -> tru
 let%test _ = try decoder_lettre stupide_map (2, 7) = '*' with LettreNonTrouve -> true;;
 let%test _ = try decoder_lettre stupide_map (1, 1) = '*' with LettreNonTrouve -> true;;
 
-
-
-
-
-
 (*
-Identifie le mot saisi à partir d’une suite de touches.
+  decoder_mot : (int * char list) list -> int list -> string
+  Décode un mot à partir d’une séquence de touches en mode non-intuitif.
+  
+  Paramètre encodage : liste associative représentant l’encodage du clavier, 
+                       associant à chaque touche un ensemble ordonné de lettres.
+  Paramètre suite : liste d’entiers représentant la séquence de touches appuyées, 
+                    avec 0 comme séparateur entre les lettres.
 
-Param:
-  encodage: liste associative, aux touches associe les lettres dans l'ordre.
-  touches: suite de touches saisie à décoder
-Retourne:
-  Le mot décodée.
-Pre-condition: 
-  o La suite de touche saisie est correspond à des lettres de l'encodage.
-  o L'encodage n'est pas une liste vide.
-  o La suite de touche saisie finie par un zéro.
-Post-condition: 
-  o Le nombre de fois qu'une touche est pressée n'est pas plus grand que le
-  nombre de lettre associée à la touche (si pas respecté lève LettreNonTrouve)
-  o Il y a des zéros entre deux suites de touches differentes et à la fin (si pas
-  respecté lève PauseManquante).
+  Résultat : chaîne représentant le mot décodé.
 
+  Pré-conditions :
+    - L'encodage est non vide.
+    - La suite de touches suit strictement le protocole :
+        * 0 sépare deux lettres différentes (ou une fin de mot)
+        * Pas de double 0 (levée de l’exception DoublePause)
+        * Une touche ne peut pas être suivie directement par une autre sans 0 (levée de l’exception PauseManquante)
+        * Le nombre d'appuis ne dépasse pas la taille de la liste associée à cette touche (sinon LettreNonTrouve)
 
-Détails d'implémentation:
-    On utilise un fold left pour prendre les touches saisies dans l'ordre et construire
-    le mot au fur est à mesure. 
-    Pour bien fonctionner nous devons mettre dans l'accumulateur les informations necessaire
-    pour construire le mot.
-    Nous avons choisi un accumulateur avec le type : (int * int ) option * string
-      o Le (int * int) option peut être vu comme un contexte, le premier int correspond à la touche 
-        qui est en train d'être répétée et le second au nombre de fois qu'on l'a répétée. 
-      o Le string et le mot qui a été construit pour le moment.
+  Post-condition :
+    - La chaîne retournée contient exactement une lettre pour chaque séquence de pressions valides
+    - L'ordre est respecté
 
-
+  Exceptions :
+    - LettreNonTrouve : si une séquence dépasse le nombre de lettres disponibles pour la touche
+    - PauseManquante : si deux touches différentes se succèdent sans 0 entre elles
+    - DoublePause : si deux 0 se suivent
 *)
+
 let decoder_mot encodage suite = 
   let aggreger acc el =
     match fst acc with
-      |None -> if (el = 0) then raise DoublePause
+      | None -> if (el = 0) then raise DoublePause
         else (Some (el, 1), (snd acc))
-      |Some (touche, nb) -> if (el = 0) then (None, ((snd acc) ^ String.make 1 (decoder_lettre encodage (touche, nb)))
+      | Some (touche, nb) -> if (el = 0) then (None, ((snd acc) ^ String.make 1 (decoder_lettre encodage (touche, nb)))
 ) (*(String.cat (snd acc) (String.make 1 (decoder_lettre encodage (touche, nb))))*)
         else if (el = touche) then (Some (el, nb + 1), (snd acc))
         else raise PauseManquante
     in let res = List.fold_left aggreger (None, "") suite
       in match fst res with
-        |None -> snd res
-        |Some _ -> raise PauseManquante
-
-
-    
-
-
+        | None -> snd res
+        | Some _ -> raise PauseManquante
 
 let%test _ = decoder_mot t9_map [2; 0;] = "a"
 let%test _ = decoder_mot t9_map [2; 2; 2; 0;] = "c"
@@ -290,4 +261,3 @@ let%test _ = try decoder_mot t9_map [2; 2; 2; 2; 0;] = "*" with LettreNonTrouve 
 let%test _ = try decoder_mot stupide_map [1; 1; 0; 3; 0;] = "*" with LettreNonTrouve -> true;;
 let%test _ = try decoder_mot t9_map [2; 2; 3; 0;] = "*" with PauseManquante -> true;;
 let%test _ = try decoder_mot t9_map [2; 2; 0; 3;] = "*" with PauseManquante -> true;;
-
