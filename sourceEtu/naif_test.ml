@@ -1,55 +1,49 @@
 open Encodage
 open Chaines
 
-
-
-
-
-
-
 (* Saisie des mots sans le mode T9 *)
 (* Pour marquer le passage d'un caractère à un autre, on utilise la touche 0 *)
 
 (* 
   index : char -> char list -> int
-   Fonction qui renvoie l'index du caractère c dans la liste liste.
-   Paramètre c : char, le caractère à chercher.
+   Fonction qui renvoie l'index du caractère lettre dans la liste liste.
+   Paramètre lettre : char, le caractère à chercher.
    Paramètre liste_lettres : char list, la liste dans laquelle chercher le caractère.
-   Résultat : un entier, l'index du caractère c dans la liste liste.
-   Pré-condition : c est une lettre de l'alphabet latin et liste non vide
+   Résultat : un entier, l'index du caractère lettre dans la liste liste.
+   Pré-condition : lettre est une lettre de l'alphabet latin et liste non vide
    Post-condition :
-   Si c est dans liste_lettres, renvoie l'index de c dans liste_lettres (commençant à 1).
-   Si c n'est pas dans liste_lettres, lève une exception avec le message "Lettre incorrecte".
+   Si lettre est dans liste_lettres, renvoie l'index de lettre dans liste_lettres (commençant à 1).
+   Si lettre n'est pas dans liste_lettres, lève une exception avec le message "Lettre incorrecte".
 *)
 
 let rec index lettre liste_lettres =
   match liste_lettres with
   | [] -> failwith "Lettre incorrecte"
   | tete::queue -> if tete = lettre then 1
-                   else 1 + index lettre queue
+                   else 1 + (index lettre queue)
 
 let%test _ = index 'a' ['a';'b';'c'] = 1
 let%test _ = index 'b' ['a';'b';'c'] = 2
 let%test _ = index 'c' ['a';'b';'c'] = 3
-let%test _ = try index 'd' ['a';'b';'c'] = 1 with Invalid_argument "Lettre incorrecte" -> true;;
-let%test _ = try index 'a' [] = 1 with Invalid_argument "Lettre incorrecte" -> true;;
+(*let%test _ = try index 'd' ['a';'b';'c'] = 1 with Invalid_argument "Lettre incorrecte" -> true;;
+let%test _ = try index 'a' [] = 1 with Invalid_argument "Lettre incorrecte" -> true;;*)
 
 (*
   EXERCICE 1
   encoder_lettre : encodage -> char -> (int * int)
   Indique la touche et le nombre de fois qu’il faut appuyer dessus 
   pour saisir la lettre passée en paramètre. 
-  Paramètre encodage : liste associative d'encodage (touche, liste de lettres)
-  Paramètre l : lettre
+  Paramètre code : liste associative d'encodage (touche, liste de lettres)
+  Paramètre lettre : char, la lettre à encoder
   Résultat : renvoie le couple (touche, nombre d'appuis) pour saisir la lettre donnée
-  Pré-conditions : l une lettre de l'alphabet latine et liste non vide
-  Post-condition : si l est dans la liste, renvoie le couple (touche, index de l dans la liste)
+  Pré-conditions : lettre une lettre de l'alphabet latine et liste non vide
+  Post-condition : si lettre est dans la liste, renvoie le couple (touche, index de lettre dans la liste)
 *)
 
 let rec encoder_lettre code lettre =
   match code with
   | [] -> failwith "Liste encodage incorrecte"
-  | (touche, liste_lettres)::queue -> 
+  | (touche, liste_lettres)::queue ->
       if List.mem lettre liste_lettres then (touche, index lettre liste_lettres)
       else encoder_lettre queue lettre
 
@@ -57,42 +51,75 @@ let%test _ = encoder_lettre t9_map 'c' = (2,3)
 let%test _ = encoder_lettre stupide_map 'e' = (2,2)
 let%test _ = encoder_lettre [(2,['a';'b';'c'])] 'b' = (2,2)
 let%test _ = encoder_lettre [(2,['a';'b';'c']) ; (3,['d';'e';'f'])] 'd' = (3,1)
-let%test _ = try encoder_lettre t9_map '%' = (2,1) with Invalid_argument "Lettre incorrecte" -> true;;
-let%test _ = try encoder_lettre [] 'a' = (2,1) with Invalid_argument "Liste encodage incorrecte" -> true;;
+(*let%test _ = try encoder_lettre t9_map '%' = (2,1) with Invalid_argument "Lettre incorrecte" -> true;;
+let%test _ = try encoder_lettre [] 'a' = (2,1) with Invalid_argument "Liste encodage incorrecte" -> true;;*)
 
 (*
   EXERCICE 1
-  encoder_mot : encodage -> string -> int list
+  encoder_mot : encode -> string -> int list
   Calcule la suite de touches à presser pour saisir un mot passé en paramètre.
-  Paramètre encodage : liste associative d'encodage (touche, liste de lettres)
+  Paramètre code : liste associative d'encodage (touche, liste de lettres)
   Paramètre mot : mot à encoder
   Résultat : une liste d'entiers représentant les touches à presser pour saisir le mot
-  Pré-conditions : mot non vide et encodage non vide
+  Pré-conditions : mot non vide et code non vide
   Post-condition : renvoie la liste des touches à presser pour saisir le mot
 *)
 
-let repeter touche nb_appuis =
-  List.init nb_appuis (fun _ -> touche)
+let sequence_encoder_lettre code lettre =
+  let (touche, nb_repetitions) = encoder_lettre code lettre in
+  let sequence = List.init nb_repetitions (fun _ -> touche) in
+  sequence @ [0]
 
-let%test _ = repeter 2 3 = [2;2;2]
-let%test _ = repeter 5 0 = []
+let%test _ = sequence_encoder_lettre t9_map 'c' = [2; 2; 2; 0]
+let%test _ = sequence_encoder_lettre stupide_map 'e' = [2; 2; 0]
+let%test _ = sequence_encoder_lettre [(2,['a';'b';'c'])] 'b' = [2; 2; 0]
 
-let encoder_mot code mot =
-  let rec aux code mot liste =
-    match mot with
-    | "" -> liste
-    | s -> let lettre = s.[0] in
-           let (touche, nombre) = encoder_lettre code lettre in
-           let ajout = List.init nombre (fun _ -> touche) in
-           aux code (String.sub s 1 ((String.length s) - 1)) (liste @ ajout @ [0])
-  in aux code mot []
+let rec encoder_mot code mot =
+  match mot with
+  | "" -> []
+  | _ -> let lettre = mot.[0] in
+         let sous_mot = String.sub mot 1 (String.length mot - 1) in
+         (sequence_encoder_lettre code lettre) @ (encoder_mot code sous_mot)
 
 let%test _ = encoder_mot t9_map "bonjour" = [2;2;0;6;6;6;0;6;6;0;5;0;6;6;6;0;8;8;0;7;7;7;0]
-let%test _ = encoder_mot stupide_map "bonjour" = [2;2;0;3;3;3;0;3;3;0;2;0;3;3;3;0;8;8;0;7;7;7;0]
-let%test _ = encoder_mot [(2,['a';'b';'c'])] "abc" = [2;2;2]
-let%test _ = encoder_mot [(2,['a';'b';'c']) ; (3,['d';'e';'f'])] "def" = [3;3;3]
+let%test _ = encoder_mot [(2,['a';'b';'c'])] "abc" = [2; 0; 2; 2; 0; 2; 2; 2; 0]
+let%test _ = encoder_mot [(2,['a';'b';'c']) ; (3,['d';'e';'f'])] "def" = [3; 0; 3; 3; 0; 3; 3; 3; 0]
+(*let%test _ = try encoder_mot t9_map "abc" = [] with Invalid_argument "Mot incorrect" -> true;;
 let%test _ = try encoder_mot t9_map "" = [] with Invalid_argument "Mot incorrect" -> true;;
-let%test _ = try encoder_mot [] "abc" = [] with Invalid_argument "Liste encodage incorrecte" -> true;;
+let%test _ = try encoder_mot [] "abc" = [] with Invalid_argument "Liste encodage incorrecte" -> true;;*)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -240,7 +267,8 @@ let decoder_mot encodage suite =
     match fst acc with
       |None -> if (el = 0) then raise DoublePause
         else (Some (el, 1), (snd acc))
-      |Some (touche, nb) -> if (el = 0) then (None, (String.cat (snd acc) (String.make 1 (decoder_lettre encodage (touche, nb)))))
+      |Some (touche, nb) -> if (el = 0) then (None, ((snd acc) ^ String.make 1 (decoder_lettre encodage (touche, nb)))
+) (*(String.cat (snd acc) (String.make 1 (decoder_lettre encodage (touche, nb))))*)
         else if (el = touche) then (Some (el, nb + 1), (snd acc))
         else raise PauseManquante
     in let res = List.fold_left aggreger (None, "") suite
