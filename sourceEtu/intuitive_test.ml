@@ -13,9 +13,9 @@ open Chaines
 
 let rec encoder_lettre code lettre =
   match code with
-  |[] -> failwith "Erreur : caractère non reconnu"
-  |(touche, lettres)::queue ->
-    if List.mem lettre lettres then touche
+  |[] -> failwith "Liste encodage incorrecte"
+  |(touche, liste_lettres)::queue ->
+    if List.mem lettre liste_lettres then touche
     else encoder_lettre queue lettre
 
 let%test _ = encoder_lettre t9_map 'a' = 2
@@ -30,9 +30,17 @@ let%test _ = encoder_lettre stupide_map 'b' = 3
    Résultat : liste d’entiers des touches pour taper le mot. *)
 
 let encoder_mot code mot =
-  List.map (encoder_lettre code) (List.of_seq (String.to_seq mot))
+  let liste_lettres = List.of_seq (String.to_seq mot) in
+  List.map (encoder_lettre code) liste_lettres
 
 let%test _ = encoder_mot t9_map "bonjour" = [2; 6; 6; 5; 6; 8; 7]
+
+
+
+
+
+
+
 
 
 
@@ -141,74 +149,6 @@ let dico_fr_stp = creer_dico stupide_map "dico_fr.txt"
 
 
 
-
-
-
-
-(* ▷ Exercice 4 Manipulation d’un dictionnaire *)
-
-(* Écrire la fonction supprimer : encodage −> dico −> string −> dico qui supprime un mot à un
-dictionnaire. La liste associative (touche, liste de lettres) est passée en paramètre de la
-fonction. Cette fonction devra élaguer les branches éventuellement devenues inutiles du
-dictionnaire. *)
-
-(* 
-  supprimer : encodage -> dico -> string -> dico
-  Supprime un mot du dictionnaire. Les branches vides après suppression sont élaguées.
-  Paramètres :
-  - code : la table d'encodage associant lettres à touches
-  - dico : le dictionnaire dans lequel on veut supprimer le mot
-  - mot : le mot à supprimer
-  Résultat : un nouveau dictionnaire avec le mot supprimé, branches inutiles supprimées
-*)
-
-(* Fonction maj d'1 dico avec le noeud modifié *)
-
-let maj_entree touche entree dictionnaire_touche mise_a_jour =
-  if touche = dictionnaire_touche then (touche, mise_a_jour)
-  else (touche, entree)
-
-let supprimer code dico mot =
-  let sequence_touches = encoder_mot code mot in
-
-  let rec supprimer_aux touches (Noeud (mots_courants, sous_dicos)) =
-    match touches with
-    | [] -> (* Cas terminal : on est au nœud cible, on retire le mot s'il est présent *)
-            let nouveaux_mots = List.filter (fun mot_dans_noeud -> mot_dans_noeud <> mot) mots_courants in
-            Noeud (nouveaux_mots, sous_dicos)
-
-    | touche_actuelle::reste_touches ->
-        match List.assoc_opt touche_actuelle sous_dicos with
-        | None -> (* Si la touche n'est pas présente dans les sous-dictionnaires, on ne peut rien supprimer *)
-                  Noeud (mots_courants, sous_dicos)
-
-        | Some sous_dico -> (* On applique récursivement la suppression dans le sous-arbre *)
-                            let sous_dico_maj = supprimer_aux reste_touches sous_dico in
-
-            (* On met à jour la liste des sous-dictionnaires avec le nœud modifié *)
-            let sous_dicos_maj = 
-              List.map (fun (t, d) -> if t = touche_actuelle then (t, sous_dico_maj) else (t, d)) sous_dicos in
-
-            (* On élague les branches vides (nœuds avec mots et fils vides) *)
-            let sous_dicos_elague = 
-              List.filter (fun (_, Noeud (m, f)) -> not (m = [] && f = [])) sous_dicos_maj in
-
-            Noeud (mots_courants, sous_dicos_elague)
-
-  in supprimer_aux sequence_touches dico
-
-let%test _ = supprimer t9_map (ajouter t9_map empty "mael") "mael" = empty
-let%test _ = appartient t9_map (supprimer t9_map dico_fr_t9 "abricot") "abricot" = false
-let%test _ = appartient t9_map dico_fr_t9 "abricot" = false
-
-
-
-
-
-
-
-
-
 let appartient encodage (Noeud (liste_mot, liste_touche_dico)) mot = 
   let rec appartient_liste_touche (Noeud (liste_mot, liste_touche_dico)) liste_touche = 
     match liste_touche with
@@ -309,20 +249,125 @@ let%test _ = decoder_mot dico_test_t9 [2; 6; 6; 5; 6; 8; 7] = ["bonjour"]
 
 
 
-(* ▷ Exercice 5 Récupération d’informations sur un dictionnaire *)
 
-(* 2. Il peut être intéressant de proposer une liste de mot à l’utilisateur avant qu’il ait fini de saisir
-son mot. Écrire la fonction prefixe : dico −> int list −> string list qui liste l’ensemble des
-mots d’un dictionnaire dont le préfixe a été saisi. *)
 
-let rec prefixe (Noeud (mots, sous_dicos)) touches =
-  match touches with
-  | [] -> mots
+
+
+
+
+
+
+
+
+
+
+let rec supprimer_dans_dictio (Noeud (liste_mots, liste_touches_dictio)) mot liste_touches =
+  match liste_touches with
+  | [] ->
+      let liste_mots_maj = List.filter (fun m -> m <> mot) liste_mots in
+      Noeud(liste_mots_maj, liste_touches_dictio)
   | touche::reste_touches ->
-    match List.assoc_opt touche sous_dicos with
-    | None -> []
-    | Some sous_dico -> aux reste_touches sous_dico
-  in prefixe touches (Noeud (mots, sous_dicos))
+      match recherche touche liste_touches_dictio with
+      | None -> Noeud(liste_mots, liste_touches_dictio)
+      | Some sous_dictio ->
+          let sous_dictio_maj = supprimer_dans_dictio sous_dictio mot reste_touches in
+          let liste_touches_dictio_maj = maj touche sous_dictio_maj liste_touches_dictio in
+          let liste_touches_dictio_elaguee =
+              List.filter (fun (_, Noeud (mots, sous_dictios)) -> mots <> [] || sous_dictios <> []) liste_touches_dictio_maj
+          in Noeud(liste_mots, liste_touches_dictio_elaguee)
 
-let%test _ = prefixe dico_test_t9 [2; 6] = ["bonjour"; "bon"]
-let%test _ = prefixe dico_test_t9 [2; 6; 6] = ["bonjour"; "bon"]
+let supprimer code dictio mot =
+  let liste_touches = encoder_mot code mot in
+  supprimer_dans_dictio dictio mot liste_touches
+
+
+
+
+let%test _ = supprimer t9_map (ajouter t9_map empty "mael") "mael" = empty
+let%test _ = appartient t9_map (supprimer t9_map dico_fr_t9 "abricot") "abricot" = false
+let%test _ = appartient t9_map dico_fr_t9 "abricot" = true
+
+
+
+
+
+(*
+  Descend dans le dictionnaire selon une liste de touches.
+  Retourne le sous-arbre correspondant au préfixe.
+*)
+let rec matching_dictio (Noeud (liste_mots, liste_touches_dictio)) liste_touches =
+  match liste_touches with
+  | [] -> Noeud (liste_mots, liste_touches_dictio)
+  | touche::reste_touches ->
+      match recherche touche liste_touches_dictio with
+      | None -> Noeud ([], [])
+      | Some sous_dictio -> matching_dictio sous_dictio reste_touches
+
+(*
+  Récupère tous les mots dans un dictionnaire récursivement.
+*)
+let rec collecter (Noeud (liste_mots, liste_touches_dictio)) =
+  let mots = List.flatten (List.map (fun (_, sous_dictio) -> collecter sous_dictio) liste_touches_dictio)
+  in liste_mots @ mots
+
+
+(*
+  Liste l’ensemble des mots du dictionnaire correspondant à un préfixe de touches.
+*)
+let prefixe dictio list_touches =
+  let sous_dictio = matching_dictio dictio list_touches in
+  collecter sous_dictio
+
+
+let%test _ =
+  List.sort compare (prefixe dico_test_t9 [2;6])
+  = ["bon"; "bonne"; "bonjour"]
+let%test _ =
+  List.sort compare (prefixe dico_test_stp [3;2])
+  = ["bon"; "bonne"; "bonjour"]
+
+
+
+
+
+
+
+let rec max_mots_code_identique dictio =
+  match dictio with | Noeud (liste_mots, suites) ->
+    let nb_mots = List.length liste_mots in
+    let rec_max_pour_suite (code, sous_dictio) = max_mots_code_identique sous_dictio in
+    let max_parmi_suites = List.map rec_max_pour_suite suites in
+    let max_suites = List.fold_left max 0 max_parmi_suites in
+    max nb_mots max_suites
+
+
+(* Construction d’un dictionnaire de test *)
+let dico_test =
+  ajouter t9_map
+    (ajouter t9_map
+      (ajouter t9_map
+        (ajouter t9_map empty "ad")
+        "ae")
+      "af")
+    "bonjour"
+
+let%test _ = max_mots_code_identique empty = 0
+let%test _ = max_mots_code_identique (ajouter t9_map empty "salut") = 1
+let%test _ = max_mots_code_identique dico_test = 3  (* "ad", "ae", "af" sur [2;3] *)
+
+(* Dico avec collisions multiples *)
+let dico2 =
+  ajouter t9_map
+    (ajouter t9_map
+      (ajouter t9_map
+        (ajouter t9_map
+          (ajouter t9_map empty "ad")
+          "ae")
+        "af")
+      "ag")
+    "ah"
+
+(* [ad, ae, af] -> [2;3], 3 mots
+   [ag, ah]     -> [2;4], 2 mots *)
+
+let%test _ = max_mots_code_identique dico2 = 3
