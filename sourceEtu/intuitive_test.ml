@@ -78,8 +78,11 @@ let rec recherche touche liste_touche_dico =
                               else recherche touche q
 
 
-(*
-
+(* maj : int -> dico -> (int * dico) list -> (int * dico) list
+    param touche       : int, touche à mettre à jour
+    param nouveau_noeud: dico, sous-arbre mis à jour
+    param liste_touche_dico: transitions initiales
+    return nouvelle liste de transitions avec touche mise à jour ou ajoutée
 *)
 let rec maj touche nouveau_noeud liste_touche_dico =
   match liste_touche_dico with 
@@ -89,6 +92,11 @@ let rec maj touche nouveau_noeud liste_touche_dico =
 
 
 
+(* ajouter_mot : string -> string list -> string list
+    param mot      : string, mot à ajouter
+    param liste_mot: string list, liste initiale de mots
+    return liste_mot avec mot ajouté si absent
+*)
 let ajouter_mot mot liste_mot =
   if List.mem mot liste_mot then liste_mot
   else mot::liste_mot
@@ -128,7 +136,13 @@ let%test _ = ajouter t9_map (Noeud([], [(2, Noeud(["a"], []))])) "a" = Noeud([],
 let%test _ = ajouter t9_map (Noeud([], [(2, Noeud(["a"], []))])) "ad" = Noeud([], [(2, Noeud(["a"], [(3, Noeud(["ad"], []))]))])
 let%test _ = ajouter t9_map (Noeud([], [(2, Noeud(["a"], [(3, Noeud(["ad"], []))]))])) "at" = Noeud([], [(2, Noeud(["a"], [(3, Noeud(["ad"], [])); (8, Noeud(["at"], []))]))])
 
-
+(* creer_dico : encodage -> string -> dico
+    Construit un dictionnaire à partir d'un fichier de mots.
+    param encodage: encodage, liste associative (touche * char list) list
+    param filename : string, chemin vers le fichier (un mot par ligne)
+    return dico, dictionnaire construit
+    raise Sys_error si le fichier est inaccessible
+*)
 
 let creer_dico encodage filename =
   let in_channel = open_in filename in
@@ -147,7 +161,13 @@ let creer_dico encodage filename =
 let dico_fr_t9 = creer_dico t9_map "dico_fr.txt"
 let dico_fr_stp = creer_dico stupide_map "dico_fr.txt"
 
-
+(* appartient : encodage -> dico -> string -> bool
+    Vérifie si un mot existe dans le dictionnaire.
+    param encodage: encodage, liste associative (touche * char list) list
+    param dictio   : dico
+    param mot      : string
+    return true si mot présent, false sinon
+*)
 
 let appartient encodage (Noeud (liste_mot, liste_touche_dico)) mot = 
   let rec appartient_liste_touche (Noeud (liste_mot, liste_touche_dico)) liste_touche = 
@@ -201,7 +221,12 @@ let%test _ = appartient stupide_map dico_fr_stp "tuy" = false
 let%test _ = appartient stupide_map dico_fr_stp "rayt" = false
 let%test _ = appartient stupide_map dico_fr_stp "kjhjgh" = false
 
-
+(* coherent : encodage -> dico -> bool
+    Vérifie que tous les mots stockés sont accessibles par leur code.
+    param encodage: encodage, liste associative
+    param dictio   : dico
+    return true si cohérent, false sinon
+*)
 
 let coherent encodage (Noeud (liste_mot, liste_touche_dico)) =
   let rec coherent_parcouru (Noeud (liste_mot, liste_touche_dico)) parcouru =
@@ -221,6 +246,12 @@ let%test _ = coherent stupide_map dico_fr_t9 = false
 let%test _ = coherent t9_map dico_fr_stp = false
 let%test _ = coherent stupide_map dico_fr_stp
 
+(* decoder_mot : dico -> int list -> string list
+    Retourne tous les mots correspondants exactement à la suite de touches.
+    param dictio   : dico
+    param code_seq : int list, suite de touches
+    return string list, mots associés ou []
+*)
 
 let rec decoder_mot (Noeud (liste_mot, liste_touche_dico)) list_touche =
   match list_touche with
@@ -276,6 +307,15 @@ let rec supprimer_dans_dictio (Noeud (liste_mots, liste_touches_dictio)) mot lis
               List.filter (fun (_, Noeud (mots, sous_dictios)) -> mots <> [] || sous_dictios <> []) liste_touches_dictio_maj
           in Noeud(liste_mots, liste_touches_dictio_elaguee)
 
+
+(* supprimer : encodage -> dico -> string -> dico
+    Supprime un mot du dictionnaire et élagage des branches vides.
+    @param encodage: encodage, liste associative
+    @param dictio   : dico
+    @param mot      : string à supprimer
+    @return dico modifié
+*)
+
 let supprimer code dictio mot =
   let liste_touches = encoder_mot code mot in
   supprimer_dans_dictio dictio mot liste_touches
@@ -294,6 +334,13 @@ let%test _ = appartient t9_map dico_fr_t9 "abricot" = true
 (*
   Descend dans le dictionnaire selon une liste de touches.
   Retourne le sous-arbre correspondant au préfixe.
+*)
+
+(* matching_dictio : dico -> int list -> dico
+    Descend dans le dictionnaire selon une liste de touches.
+    @param dictio   : dico
+    @param code_seq : int list
+    @return sous-arbre correspondant ou Noeud ([], []) si aucun
 *)
 let rec matching_dictio (Noeud (liste_mots, liste_touches_dictio)) liste_touches =
   match liste_touches with
@@ -314,6 +361,12 @@ let rec collecter (Noeud (liste_mots, liste_touches_dictio)) =
 (*
   Liste l’ensemble des mots du dictionnaire correspondant à un préfixe de touches.
 *)
+(* prefixe : dico -> int list -> string list
+    Liste tous les mots du dictionnaire dont le code commence par code_seq.
+    @param dictio   : dico
+    @param code_seq : int list, préfixe de touches
+    @return mots correspondants (peut être vide)
+*)
 let prefixe dictio list_touches =
   let sous_dictio = matching_dictio dictio list_touches in
   collecter sous_dictio
@@ -330,6 +383,11 @@ let%test _ =
 
 
 
+(* max_mots_code_identique : dico -> int
+    Calcule le nombre maximal de mots partageant la même séquence de touches.
+    @param dictio : dico
+    @return int, maximum de |mots| parmi tous les nœuds
+*)
 
 
 let rec max_mots_code_identique dictio =
