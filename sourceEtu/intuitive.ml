@@ -9,7 +9,10 @@ open Chaines
    Retourne la touche associée à la lettre passée en paramètre.
    Paramètre code : encodage, encodage utilisé.
    Paramètre lettre : char, lettre à coder.
-   Résultat : numéro de la touche associée à la lettre. *)
+   Résultat : numéro de la touche associée à la lettre. 
+   Precondition: La lettre est en minuscule
+   Postcondition: le chiffre obtenu est une des touches de l'encodage.
+*)
 
 let rec encoder_lettre code lettre =
   match code with
@@ -27,7 +30,10 @@ let%test _ = encoder_lettre stupide_map 'b' = 3
    Retourne la suite de touches pour le mot passé en paramètre.
    Paramètre code : encodage, encodage utilisé.
    Paramètre mot : string, mot à encoder.
-   Résultat : liste d’entiers des touches pour taper le mot. *)
+   Résultat : liste d’entiers des touches pour taper le mot. 
+   Precondition: Les lettres sont en minuscule
+   Postcondition: les chiffres obtenus sont des touches de l'encodage.
+*)
 
 let encoder_mot code mot =
   List.map (encoder_lettre code) (List.of_seq (String.to_seq mot))
@@ -61,7 +67,7 @@ Param:
     du dictionnaire.
 Retourne:
   Le dictionnaire avec le mot ajouté.
-
+Postcondition: Le resultat est None si et seulement si touche n'est pas dans liste_touche_dico
 *)
 let rec recherche touche liste_touche_dico =
   match liste_touche_dico with 
@@ -96,7 +102,7 @@ Param:
     du dictionnaire.
 Retourne:
   Le dictionnaire avec le mot ajouté.
-
+Postcondition: le mot ajouté appartient au dictionnaire
 *)
 let ajouter encodage (Noeud (liste_mot, liste_touche_dico)) mot = 
 
@@ -214,6 +220,19 @@ let%test _ = coherent t9_map dico_fr_stp = false
 let%test _ = coherent stupide_map dico_fr_stp
 
 
+(*
+Identifie l’ensemble des mots correspondant à une suite de touches dans un dictionnaire
+Param:
+  Noeud(liste_mot, liste_dico) : dictionnaire dont on veut decoder un mots.
+    liste_mot correspond à la liste de mots associée au premier noeud,
+    list_touche_dico: liste de couples (touche, dictionnaire) correspondants à la suite
+    du dictionnaire.
+  list_touche : la liste de touches qu'on veut décoder.
+Retourne:
+  La liste des mots qui correspond à la liste de touches décodée. 
+Precondition: les chiffre de list_touch sont des touches de l'encodage.
+Postcondition: le mot obtenu est un mot du dictionnaire.
+*)
 let rec decoder_mot (Noeud (liste_mot, liste_touche_dico)) list_touche =
   match list_touche with
     |[] -> liste_mot
@@ -233,3 +252,89 @@ let%test _ = decoder_mot dico_test_stp [3; 2; 3; 3; 2; 3] = []
 let%test _ = decoder_mot dico_test_stp [3; 2; 3; 3] = []
 
 let%test _ = decoder_mot dico_test_t9 [2; 6; 6; 5; 6; 8; 7] = ["bonjour"]
+
+(* 
+Liste l’ensemble des mots d’un dictionnaire
+Param:
+  Noeud(liste_mot, liste_dico) : dictionnaire dont on veut lister les mots.
+    liste_mot correspond à la liste de mots associée au premier noeud,
+    list_touche_dico: liste de couples (touche, dictionnaire) correspondants à la suite
+    du dictionnaire.
+Retourne:
+  La liste des mots du dictionnaire. 
+*)
+let rec lister (Noeud (liste_mot, liste_touche_dico)) =
+  match liste_mot with
+    |mot::q_mot -> mot::(lister (Noeud (q_mot, liste_touche_dico))) 
+    |[] -> match liste_touche_dico with
+      |[] -> []
+      |(_, dico_t)::q_touche_dico -> (lister dico_t)@(lister (Noeud (liste_mot, q_touche_dico)))
+
+
+let dico_test_list = lister dico_test_t9
+
+let%test _ = List.mem "bon" dico_test_list
+let%test _ = List.mem "bonne" dico_test_list
+let%test _ = List.mem "bonjour" dico_test_list
+let%test _ = List.mem "vendre" dico_test_list
+let%test _ = List.mem "tendre" dico_test_list 
+let%test _ = List.length dico_test_list = 5
+
+let dico_test_list_stp = lister dico_test_stp
+
+let%test _ = List.mem "bon" dico_test_list_stp
+let%test _ = List.mem "bonne" dico_test_list_stp
+let%test _ = List.mem "bonjour" dico_test_list_stp
+let%test _ = List.mem "vendre" dico_test_list_stp
+let%test _ = List.mem "tendre" dico_test_list_stp
+let%test _ = List.length dico_test_list_stp = 5
+
+(* 
+Identifie l’ensemble des mots correspondant à une suite de touches dans laquelle exactement
+n (troisième paramètre) erreurs se sont glissées
+Param:
+  encodage: liste associative, aux touches associe les lettres.
+  Noeud(liste_mot, liste_dico) : dictionnaire sur lequel on travaille.
+    liste_mot correspond à la liste de mots associée au premier noeud,
+    list_touche_dico: liste de couples (touche, dictionnaire) correspondants à la suite
+    du dictionnaire.
+Retourne:
+  La liste des mots correspondant à n erreurs. 
+Postcondition:
+  Les mots obtenus ont la même taille que la liste liste_touche.
+  Les mots obtenus appartiennent au dictionnaire.
+*)
+let rec proche (Noeud (liste_mot, liste_touche_dico)) liste_touche n =
+  if n < 0 then []
+  else 
+    match liste_touche with
+      |[] -> if n = 0 then liste_mot
+        else []
+      |next_touche::q_touche -> match liste_touche_dico with
+        |[] -> []
+        |(touche_t, dico_t)::q_touche_dico -> 
+          if (touche_t=next_touche) then (proche dico_t q_touche n) @ (proche (Noeud (liste_mot, q_touche_dico)) liste_touche n)
+          else (proche dico_t q_touche (n-1)) @ (proche (Noeud (liste_mot, q_touche_dico)) liste_touche n)
+
+
+let dico_test2_t9 = creer_dico t9_map "test2.txt"
+let proche_bonbon5 = proche dico_test2_t9 (encoder_mot t9_map "bonbon") 5  
+
+let%test _ = List.length proche_bonbon5 = 3
+let%test _ = List.mem "tendre" proche_bonbon5
+let%test _ = List.mem "vendre" proche_bonbon5
+let%test _ = List.mem "cheval" proche_bonbon5
+let%test _ = proche dico_test2_t9 (encoder_mot t9_map"cheval") 5 = ["bonbon"]
+let%test _ = proche dico_test2_t9 (encoder_mot t9_map"vendre") 6 = ["cheval"]
+let%test _ = proche dico_test2_t9 (encoder_mot t9_map "bon") 1 = ["ton"]
+let%test _ = proche dico_test2_t9 (encoder_mot t9_map "ton") 1 = ["bon"]
+
+let dico_test2_stp = creer_dico stupide_map "test2.txt"
+let proche_bonbon2 = proche dico_test2_stp (encoder_mot stupide_map "bonbon") 2
+
+let%test _ = List.length proche_bonbon5 = 3
+let%test _ = List.mem "tendre" proche_bonbon2
+let%test _ = List.mem "vendre" proche_bonbon2
+let%test _ = List.mem "cheval" proche_bonbon2
+
+
