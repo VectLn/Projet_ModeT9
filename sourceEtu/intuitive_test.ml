@@ -3,9 +3,9 @@ open Chaines
 
 (* Saisie des mots en mode T9 *)
 
-(*4 Avec saisie intuitive*)
+(* 4 Avec saisie intuitive *)
 
-(*Exercice 3 : Mots → touches*)
+(* Exercice 3 : Mots → touches *)
 
 (*
   encoder_lettre : encodage -> char -> int
@@ -17,26 +17,28 @@ open Chaines
   Pré-conditions :
     - La lettre doit appartenir à l’une des listes associées dans le code.
     - L’encodage ne doit pas être vide.
-  Post-condition :
+  Post-conditions :
     - Retourne la première touche trouvée dans l'encodage contenant la lettre.
     - Si la lettre n'est présente dans aucune liste, une exception est levée (failwith ici).
   Exceptions :
-    - Lève `Failure "Liste encodage incorrecte"` si la lettre n'est trouvée dans aucune association.
+    - Lève 'Failure "Liste encodage incorrecte"' si la lettre n'est trouvée dans aucune association.
 *)
 
 let rec encoder_lettre code lettre =
   match code with
   |[] -> failwith "Liste encodage incorrecte"
-  |(touche, liste_lettres)::queue ->
+  |(touche, liste_lettres)::reste_code ->
     if List.mem lettre liste_lettres then touche
-    else encoder_lettre queue lettre
+    else encoder_lettre reste_code lettre
 
 let%test _ = encoder_lettre t9_map 'a' = 2
 let%test _ = encoder_lettre t9_map 'b' = 2
 let%test _ = encoder_lettre stupide_map 'a' = 2
 let%test _ = encoder_lettre stupide_map 'b' = 3
-(*let%test _ = encoder_lettre t9_map '%' = failwith "Liste encodage incorrecte"
-let%test _ = encoder_lettre [] 'a' = failwith "Liste encodage incorrecte"*)
+
+let%test _ = try let _ = encoder_lettre t9_map '%' in false with Failure "Liste encodage incorrecte" -> true
+let%test _ = try let _ = encoder_lettre [] 'a' in false with Failure "Liste encodage incorrecte" -> true
+let%test _ = try let _ = encoder_lettre [(2, ['b'; 'c'])] 'a' in false with Failure "Liste encodage incorrecte" -> true
 
 (*
   encoder_mot : encodage -> string -> int list
@@ -47,13 +49,13 @@ let%test _ = encoder_lettre [] 'a' = failwith "Liste encodage incorrecte"*)
   Pré-conditions :
     - Chaque lettre du mot doit être présente dans l'encodage.
     - L'encodage ne doit pas être vide.
-  Post-condition :
+  Post-conditions :
     - La longueur de la liste retournée est égale à celle du mot.
     - Chaque lettre est transformée en un seul chiffre correspondant à sa touche.
     - L'ordre des lettres est conservé.
   Exceptions :
-    - Lève `Failure "Liste encodage incorrecte"` si une lettre du mot n’est pas présente dans l’encodage
-      (via `encoder_lettre`)
+    - Lève 'Failure "Liste encodage incorrecte"' si une lettre du mot n’est pas présente dans l’encodage
+      (via 'encoder_lettre')
 *)
 
 let encoder_mot code mot =
@@ -63,18 +65,21 @@ let encoder_mot code mot =
 let%test _ = encoder_mot t9_map "bonjour" = [2; 6; 6; 5; 6; 8; 7]
 let%test _ = encoder_mot stupide_map "abc" = [2; 3; 3]
 let%test _ = encoder_mot [(2,['a';'b';'c']) ; (3,['d';'e';'f'])] "def" = [3; 3; 3]
-(*let%test _ = try encoder_mot t9_map "abc%" = failwith "Liste encodage incorrecte" with Failure _ -> true
-let%test _ = try encoder_mot [] "abc" = failwith "Liste encodage incorrecte" with Failure _ -> true*)
+
+let%test _ = try let _ = encoder_mot t9_map "abc%" in false with Failure "Liste encodage incorrecte" -> true
+let%test _ = try let _ = encoder_mot [] "abc" in false with Failure "Liste encodage incorrecte" -> true
+let%test _ = try let _ = encoder_mot [(2, ['b'; 'c'])] "abc" in false with Failure "Liste encodage incorrecte" -> true
+
 
 
 (*-----------------------------------------------------------------------------------------------*)
 
 
 
-(*▷ Exercice 4 Manipulation d’un dictionnaire*)
+(* ▷ Exercice 4 Manipulation d’un dictionnaire *)
 
 (* Definition du type dictionaire *)
-type dico = Noeud of ( string list * ( int * dico) list )
+type dico = Noeud of ( string list * (int * dico) list )
 
 (* Créer un dictionnaire vide *)
 let empty = Noeud([], [])
@@ -87,15 +92,15 @@ let empty = Noeud([], [])
   Résultat : 
     - Some dico si la touche est trouvée dans la liste.
     - None si la touche est absente.
-  Post-condition : 
-    - Le résultat est `Some dico` ssi il existe un couple (touche, dico) dans la liste.
+  Post-conditions : 
+    - Le résultat est 'Some dico' ssi il existe un couple (touche, dico) dans la liste.
 *)
 
 let rec recherche touche liste_touche_dico =
   match liste_touche_dico with
   | [] -> None
   | (t_touche, t_dico)::q -> if (t_touche=touche) then Some t_dico
-                            else recherche touche q
+                             else recherche touche q
 
 let%test _ = recherche 2 [(2, Noeud([], [])); (3, Noeud([], []))] = Some (Noeud([], []))
 let%test _ = recherche 3 [(2, Noeud([], [])); (3, Noeud([], []))] = Some (Noeud([], []))
@@ -110,8 +115,8 @@ let%test _ = recherche 2 [] = None
   Paramètre liste_touche_dico : liste d’associations (touche, sous-dictionnaire).
   Résultat :
     - Une nouvelle liste avec la touche mise à jour ou ajoutée en tête.
-  Post-condition :
-    - Si la touche était déjà présente, son dictionnaire est remplacé par `nouveau_noeud`.
+  Post-conditions :
+    - Si la touche était déjà présente, son dictionnaire est remplacé par 'nouveau_noeud'.
     - Sinon, le couple (touche, nouveau_noeud) est ajouté en tête de la liste.
 *)
 
@@ -119,7 +124,7 @@ let rec maj touche nouveau_noeud liste_touche_dico =
   match liste_touche_dico with
   | [] -> [(touche, nouveau_noeud)]
   | (t_touche, t_dico)::q -> if (t_touche =  touche) then (touche, nouveau_noeud)::q
-                            else (t_touche, t_dico)::(maj touche nouveau_noeud q)
+                             else (t_touche, t_dico)::(maj touche nouveau_noeud q)
 
 let%test _ = maj 2 (Noeud([], [])) [(2, Noeud(["a"], [])); (3, Noeud(["b"], []))] = [(2, Noeud([], [])); (3, Noeud(["b"], []))]
 let%test _ = maj 3 (Noeud(["c"], [])) [(2, Noeud(["a"], [])); (3, Noeud(["b"], []))] = [(2, Noeud(["a"], [])); (3, Noeud(["c"], []))]
@@ -132,7 +137,7 @@ let%test _ = maj 2 (Noeud(["a"], [])) [] = [(2, Noeud(["a"], []))]
   Paramètre liste_mot : liste de mots à compléter.
   Résultat :
     - Une liste contenant le mot, sans doublons.
-  Post-condition :
+  Post-conditions :
     - Le mot est dans la liste résultante.
     - Si le mot était déjà présent, la liste est inchangée.
 *)
@@ -156,7 +161,7 @@ let%test _ = ajouter_mot "a" ["a"; "b"; "c"] = ["a"; "b"; "c"]
   Pré-conditions :
     - Le mot est constitué uniquement de lettres présentes dans l'encodage.
     - Le dictionnaire est bien formé (chaîne valide de noeuds Noeud).
-  Post-condition :
+  Post-conditions :
     - Le mot apparaît bien dans un noeud à l’issue du chemin correspondant à sa suite de touches.
     - Les autres mots du dictionnaire sont conservés inchangés.
 *)
@@ -187,18 +192,15 @@ let%test _ = ajouter t9_map (Noeud([], [(2, Noeud(["a"], [(3, Noeud(["ad"], []))
   Paramètre encodage : liste associative (touche, lettres associées).
   Paramètre filename : nom ou chemin du fichier texte contenant un mot par ligne.
   Résultat :
-    - Un dictionnaire (`dico`) contenant tous les mots du fichier, encodés selon les touches.
+    - Un dictionnaire ('dico') contenant tous les mots du fichier, encodés selon les touches.
   Pré-conditions :
     - Le fichier doit exister et être lisible.
     - Chaque ligne du fichier contient un mot valide (lettres uniquement).
     - Toutes les lettres des mots doivent être couvertes par l’encodage fourni.
-  Post-condition :
+  Post-conditions :
     - Tous les mots du fichier sont ajoutés au dictionnaire, selon les touches de leur encodage.
-  Effets de bord :
-    - Lecture de fichier avec `open_in` / `input_line` / `close_in`.
   Exceptions :
     - Peut échouer avec une exception système si le fichier est introuvable ou non lisible.
-    - Lève potentiellement une exception définie dans `ajouter` si un mot contient une lettre non présente dans l’encodage.
 *)
 
 let creer_dico encodage filename =
@@ -287,8 +289,6 @@ let%test _ = appartient stupide_map dico_fr_stp "tuy" = false
 let%test _ = appartient stupide_map dico_fr_stp "rayt" = false
 let%test _ = appartient stupide_map dico_fr_stp "kjhjgh" = false
 
-
-
 (*
   supprimer_dans_dictio : dico -> string -> int list -> dico
   Supprime un mot dans un dictionnaire en suivant la séquence de touches correspondante.
@@ -298,11 +298,9 @@ let%test _ = appartient stupide_map dico_fr_stp "kjhjgh" = false
   Résultat :
     - Un dictionnaire où le mot a été supprimé s’il était présent
   Post-conditions :
-    - Si le mot était présent à la position terminale, il est supprimé de la liste de mots
+    - Si le mot était présent à la position finale, il est supprimé de la liste de mots
     - Toute branche devenant vide (aucun mot et aucun sous-dictionnaire) est supprimée (élagage)
     - Le reste du dictionnaire est inchangé
-  Exceptions :
-    - Aucune exception n’est levée, même si le mot n’était pas présent (comportement silencieux)
 *)
 
 let rec supprimer_dans_dictio (Noeud (liste_mots, liste_touches_dictio)) mot liste_touches =
@@ -310,13 +308,15 @@ let rec supprimer_dans_dictio (Noeud (liste_mots, liste_touches_dictio)) mot lis
   | [] ->
       let liste_mots_maj = List.filter (fun m -> m <> mot) liste_mots in
       Noeud(liste_mots_maj, liste_touches_dictio)
+
   | touche::reste_touches ->
       match recherche touche liste_touches_dictio with
-      | None -> Noeud(liste_mots, liste_touches_dictio)
+      | None -> 
+          Noeud(liste_mots, liste_touches_dictio)
       | Some sous_dictio ->
           let sous_dictio_maj = supprimer_dans_dictio sous_dictio mot reste_touches in
           let liste_touches_dictio_maj = maj touche sous_dictio_maj liste_touches_dictio in
-          let liste_touches_dictio_elaguee =
+          let liste_touches_dictio_elaguee = (* filtrer pour élaguer (cf post-conditions) *)
               List.filter (fun (_, Noeud (mots, sous_dictios)) -> mots <> [] || sous_dictios <> []) liste_touches_dictio_maj
           in Noeud(liste_mots, liste_touches_dictio_elaguee)
 
@@ -327,7 +327,7 @@ let rec supprimer_dans_dictio (Noeud (liste_mots, liste_touches_dictio)) mot lis
   Paramètre dictio : dictionnaire T9 dans lequel on veut supprimer un mot
   Paramètre mot : le mot à supprimer
   Résultat :
-    - Un dictionnaire dans lequel le mot a été supprimé, si présent
+    - Un dictionnaire dans lequel le mot a été supprimé, si le mot était présent
   Pré-conditions :
     - Le mot ne doit contenir que des lettres présentes dans l’encodage
   Post-conditions :
@@ -339,67 +339,53 @@ let supprimer code dictio mot =
   let liste_touches = encoder_mot code mot in
   supprimer_dans_dictio dictio mot liste_touches
 
-let dico_test_a = Noeud([], [(2, Noeud(["a"], []))])
-let dico_test_ad = Noeud([], [(2, Noeud(["a"], [(3, Noeud(["ad"], []))]))])
-let dico_test_ad_at = Noeud([], [(2, Noeud(["a"], [(3, Noeud(["ad"], [])); (8, Noeud(["at"], []))]))])
-let dico_test_ad_at_au = Noeud([], [(2, Noeud(["a"], [(3, Noeud(["ad"], [])); (8, Noeud(["at"; "au"], []))]))])
-
-let dico_test_ad_at_au_lol = ajouter t9_map dico_test_ad_at_au "lol"
-let dico_test_ad_at_au_lo = ajouter t9_map dico_test_ad_at_au "lo"
-
 let dico_test_a = Noeud ([], [(2, Noeud (["a"], []))])
 let dico_test_a_ad = Noeud ([], [(2, Noeud (["a"], [(3, Noeud (["ad"], []))]))])
 let dico_test_a_ad_at = Noeud ([], [(2, Noeud (["a"], [(3, Noeud (["ad"], [])); (8, Noeud (["at"], []))]))])
-let dico_test_a_ad_at_au = Noeud ([], [(2, Noeud (["a"], [(3, Noeud (["ad"], [])); (8, Noeud (["at"; "af"], []))]))])
+
+let dico_test_a_ad_at_lol = ajouter t9_map dico_test_a_ad_at "lol"
+let dico_test_a_ad_at_lol_lo = ajouter t9_map dico_test_a_ad_at_lol "lo"
 
 let%test _ = supprimer t9_map dico_test_a "a" = empty
-let%test _ = supprimer t9_map dico_test_ad "ad" = dico_test_a
-(*let%test _ = supprimer t9_map dico_test_ad_at_au_lo "lo" = dico_test_ad_at_au_lol*)
-let%test _ = supprimer t9_map dico_test_ad_at_au_lol "lol" = dico_test_ad_at_au
+let%test _ = supprimer t9_map dico_test_a_ad "ad" = dico_test_a
+let%test _ = supprimer t9_map dico_test_a_ad_at_lol_lo "lo" = dico_test_a_ad_at_lol
+let%test _ = supprimer t9_map dico_test_a_ad_at_lol "lol" = dico_test_a_ad_at
 let%test _ = supprimer t9_map dico_test_a "nimporte" = dico_test_a
 
-
-let%test _ = supprimer t9_map dico_fr_t9 "abricot" = Noeud([], [(2, Noeud(["a"], [(3, Noeud(["ad"], [])); (8, Noeud(["at"], []))]))])
-let%test _ = supprimer t9_map dico_fr_t9 "coutelier" = Noeud([], [(2, Noeud(["a"], [(3, Noeud(["ad"], [])); (8, Noeud(["at"], []))]))])
 let%test _ = supprimer t9_map (ajouter t9_map empty "mael") "mael" = empty
 let%test _ = appartient t9_map (supprimer t9_map dico_fr_t9 "abricot") "abricot" = false
-
-
 
 (*
   coherent : encodage -> dico -> bool
   Vérifie si un dictionnaire est cohérent pour un encodage donné.
 
   Paramètre encodage : liste associative représentant le clavier (touche, lettres associées)
-  Paramètre dico : dictionnaire T9 (type dico) à vérifier
+  Paramètre dico : dictionnaire T9 (type dico)
 
   Résultat :
     - true si le dictionnaire est cohérent (chaque mot correspond à son chemin)
     - false sinon
 
   Définition de la cohérence :
-    - Un mot stocké dans un nœud doit être encodable via `encoder_mot`, et le résultat
-      doit être égal (à l'ordre près) à la **séquence de touches** correspondant au chemin
-      depuis la racine jusqu’à ce nœud.
+    - Un mot stocké dans un nœud doit être encodable via 'encoder_mot', 
+      et le résultat doit être égal à la séquence de touches 
+      correspondant au chemin depuis la racine jusqu’à ce nœud.
 
   Post-conditions :
     - Tous les mots de chaque nœud respectent le chemin de touches menant à ce nœud
-    - Si un seul mot est mal placé, la fonction retourne `false`
+    - Si un seul mot est mal placé, la fonction retourne 'false'
 
   Implémentation :
-    - Un accumulateur `parcouru` garde la trace du chemin depuis la racine
-    - On vérifie que pour chaque mot, `List.rev (encoder_mot encodage mot) = parcouru`
+    - Un accumulateur 'parcouru' garde la trace du chemin depuis la racine
+    - On vérifie que pour chaque mot, 'List.rev (encoder_mot encodage mot) = parcouru'
     - On parcourt récursivement tous les sous-dictionnaires avec mise à jour du chemin
-
-  Exceptions :
-    - Aucune exception levée, même si le dictionnaire est mal formé (retourne `false`)
 *)
 
 let coherent encodage (Noeud (liste_mot, liste_touche_dico)) =
   let rec coherent_parcouru (Noeud (liste_mot, liste_touche_dico)) parcouru =
     match liste_mot with 
       |mot::q_mot -> if (List.equal (=) (List.rev (encoder_mot encodage mot)) parcouru) then coherent_parcouru (Noeud (q_mot, liste_touche_dico)) parcouru
-        else false
+                     else false
       |[] -> match liste_touche_dico with
         |[] -> true
         |(touche_t, dico_t)::q_touche_dico -> if coherent_parcouru dico_t (touche_t::parcouru) 
@@ -419,7 +405,7 @@ let%test _ = coherent stupide_map dico_fr_stp
 
 
 
-(*Exercice 5 Récupération d’informations sur un dictionnaire*)
+(* Exercice 5 Récupération d’informations sur un dictionnaire *)
 
 (*
   decoder_mot : dico -> int list -> string list
@@ -427,27 +413,24 @@ let%test _ = coherent stupide_map dico_fr_stp
 
   Paramètre Noeud(liste_mot, liste_touche_dico) :
     - dictionnaire T9 représenté comme un arbre n-aire,
-    - `liste_mot` : liste des mots associés au nœud courant,
-    - `liste_touche_dico` : sous-dictionnaires indexés par touches.
+    - 'liste_mot' : liste des mots associés au nœud courant,
+    - 'liste_touche_dico' : sous-dictionnaires indexés par touches.
 
   Paramètre list_touche :
     - liste d'entiers représentant la suite de touches tapée par l'utilisateur.
 
   Résultat :
-    - liste des mots qui correspondent **exactement** à la séquence de touches donnée,
+    - liste des mots qui correspondent exactement à la séquence de touches donnée,
       selon la structure du dictionnaire.
 
   Pré-conditions :
-    - Chaque touche de `list_touche` est censée exister dans l'encodage utilisé pour construire le dictionnaire.
-    - Le dictionnaire a été construit via des appels cohérents à `ajouter`.
+    - Chaque touche de 'list_touche' est censée exister dans l'encodage utilisé pour construire le dictionnaire.
+    - Le dictionnaire a été construit via des appels cohérents à 'ajouter'.
 
   Post-conditions :
     - Si un chemin complet est trouvé dans le dictionnaire, on retourne les mots associés au nœud terminal.
     - Si le chemin est interrompu (aucune branche correspondante), on retourne une liste vide.
     - Aucun mot partiel n’est retourné (il doit y avoir correspondance exacte avec le chemin).
-
-  Exceptions :
-    - Aucune exception levée. Si la suite de touches est invalide, retourne [].
 *)
 
 let rec decoder_mot (Noeud (liste_mot, liste_touche_dico)) list_touche =
@@ -468,19 +451,16 @@ let%test _ = decoder_mot dico_test_stp [3; 2; 3; 3] = []
 
 let%test _ = decoder_mot dico_test_t9 [2; 6; 6; 5; 6; 8; 7] = ["bonjour"]
 
-
-
 (*
   matching_dictio : dico -> int list -> dico
-  Descend dans le dictionnaire jusqu’au nœud correspondant à une séquence de touches donnée.
+  Parcours le dictionnaire jusqu’au nœud correspondant à une séquence de touches donnée.
   Paramètre Noeud(liste_mots, liste_touches_dictio) : dictionnaire T9 sous forme d’arbre.
   Paramètre liste_touches : liste d'entiers représentant un début de séquence de touches.
   Résultat :
     - Le sous-dictionnaire atteint en suivant la suite de touches fournie.
     - Si la séquence ne correspond à aucun chemin valide, retourne un dictionnaire vide (Noeud ([], [])).
-  Post-condition :
-    - Ne lève pas d’exception.
-    - Le dictionnaire retourné peut être exploré sans danger.
+  Post-conditions :
+    - Le dictionnaire retourné peut être exploré.
 *)
 
 let rec matching_dictio (Noeud (liste_mots, liste_touches_dictio)) liste_touches =
@@ -497,29 +477,27 @@ let rec matching_dictio (Noeud (liste_mots, liste_touches_dictio)) liste_touches
   Paramètre Noeud(liste_mots, liste_touches_dictio) : dictionnaire T9.
   Résultat :
     - Une liste contenant tous les mots des nœuds de l’arbre.
-  Post-condition :
+  Post-conditions :
     - L’ordre des mots n’est pas garanti.
     - Tous les mots présents dans le dictionnaire sont inclus dans le résultat.
     - Ne contient pas de doublons si le dictionnaire est bien construit.
 *)
 
 let rec collecter (Noeud (liste_mots, liste_touches_dictio)) =
-  let mots = List.flatten (List.map (fun (_, sous_dictio) -> collecter sous_dictio) liste_touches_dictio)
-  in liste_mots @ mots
+  let mots = List.map (fun (_, sous_dictio) -> collecter sous_dictio) liste_touches_dictio
+  in liste_mots @ List.flatten(mots)
 
 (*
   prefixe : dico -> int list -> string list
   Retourne tous les mots d’un dictionnaire dont la séquence de touches commence par un certain préfixe.
   Paramètre dictio : dictionnaire T9.
   Paramètre list_touches : séquence de touches partiellement saisie par l'utilisateur.
-
   Résultat :
     - Une liste de mots dont le code T9 commence par cette séquence de touches.
-  Pré-condition :
+  Pré-conditions :
     - La liste de touches peut être vide (dans ce cas, retourne tous les mots).
     - Le dictionnaire doit être bien formé.
-  Post-condition :
-    - Ne lève pas d’exception.
+  Post-conditions :
     - Si la séquence ne mène à aucun nœud, retourne une liste vide.
 *)
 
@@ -527,8 +505,21 @@ let prefixe dictio list_touches =
   let sous_dictio = matching_dictio dictio list_touches in
   collecter sous_dictio
 
-let%test _ = List.sort compare (prefixe dico_test_t9 [2;6]) = ["bon"; "bonne"; "bonjour"]
-let%test _ = List.sort compare (prefixe dico_test_stp [3;2]) = ["bon"; "bonne"; "bonjour"; "tendre"; "vendre"]
+(*
+  test.txt contient les mots suivants :
+  - bon
+  - bonne
+  - bonjour
+  - tendre
+  - vendre
+*)
+let egalite_sans_ordre l1 l2 = (List.sort compare l1 = List.sort compare l2)
+
+let%test _ = egalite_sans_ordre (prefixe dico_test_t9 [2;6]) ["bon"; "bonne"; "bonjour"]
+let%test _ = egalite_sans_ordre (prefixe dico_test_t9 [8;3;6]) ["tendre"; "vendre"]
+
+let%test _ = egalite_sans_ordre (prefixe dico_test_t9 []) ["bon"; "bonne"; "bonjour"; "tendre"; "vendre"]
+let%test _ = egalite_sans_ordre (prefixe dico_test_t9 [1;2]) []
 
 (*
   max_mots_code_identique : dico -> int
@@ -536,77 +527,47 @@ let%test _ = List.sort compare (prefixe dico_test_stp [3;2]) = ["bon"; "bonne"; 
   Paramètre dictio : dictionnaire T9 sous forme d’arbre (type dico).
   Résultat :
     - Un entier représentant le nombre maximum de mots présents dans un même nœud du dictionnaire.
-  Interprétation :
-    - Chaque nœud correspond à une séquence de touches.
-    - Certains mots peuvent partager une même séquence (homonymes en T9).
-    - Cette fonction retourne le nombre maximal de tels mots partageant une même séquence.
-  Post-condition :
-    - Le résultat est ≥ 0.
-    - Si le dictionnaire est vide (`Noeud ([], [])`), retourne 0.
+  Post-conditions :
+    - Le résultat est >= 0.
+    - Si le dictionnaire est vide ('Noeud ([], [])'), retourne 0.
     - Sinon, retourne le maximum entre :
-        • le nombre de mots dans le nœud courant,
-        • les maxima des sous-dictionnaires récursivement.
-  Exceptions :
-    - Aucune. Fonction purement fonctionnelle.
+      - le nombre de mots dans le nœud courant,
+      - les maximums des sous-dictionnaires récursivement.
+  
+  Interprétation :
+  - Chaque nœud correspond à une séquence de touches.
+  - Certains mots peuvent partager une même séquence (homonymes en T9).
+  - Cette fonction retourne le nombre maximal de tels mots partageant une même séquence.
 *)
 
 let rec max_mots_code_identique dictio =
   match dictio with | Noeud (liste_mots, suites) ->
     let nb_mots = List.length liste_mots in
-    let rec_max_pour_suite (code, sous_dictio) = max_mots_code_identique sous_dictio in
-    let max_parmi_suites = List.map rec_max_pour_suite suites in
-    let max_suites = List.fold_left max 0 max_parmi_suites in
+    let fct_max_pour_suite (code, sous_dictio) = max_mots_code_identique sous_dictio in
+    let max_parmis_suites = List.map fct_max_pour_suite suites in
+    let max_suites = List.fold_left max 0 max_parmis_suites in
     max nb_mots max_suites
 
 let%test _ = max_mots_code_identique empty = 0
+let%test _ = max_mots_code_identique (ajouter t9_map empty "bonjour") = 1
 
-
-(* Construction d’un dictionnaire de test *)
-let dico_test =
-  ajouter t9_map
-    (ajouter t9_map
-      (ajouter t9_map
-        (ajouter t9_map empty "ad")
-        "ae")
-      "af")
-    "bonjour"
-
-let%test _ = max_mots_code_identique empty = 0
-let%test _ = max_mots_code_identique (ajouter t9_map empty "salut") = 1
-let%test _ = max_mots_code_identique dico_test = 3  (* "ad", "ae", "af" sur [2;3] *)
-
-(* Dico avec collisions multiples *)
-let dico2 =
-  ajouter t9_map
-    (ajouter t9_map
-      (ajouter t9_map
-        (ajouter t9_map
-          (ajouter t9_map empty "ad")
-          "ae")
-        "af")
-      "ag")
-    "ah"
-
-(* [ad, ae, af] -> [2;3], 3 mots
-   [ag, ah]     -> [2;4], 2 mots *)
-
-let%test _ = max_mots_code_identique dico2 = 3
-
-
+let%test _ = max_mots_code_identique dico_test_a = 1
+let dico_test_a_ad_at_au = ajouter t9_map dico_test_a_ad_at "au"
+let dico_test_a_ad_at_au = Noeud ([], [(2, Noeud (["a"], [(3, Noeud (["ad"], [])); (8, Noeud (["at"; "au"], []))]))])
+let%test _ = max_mots_code_identique dico_test_a_ad_at_au = 2
 
 (*
   lister : dico -> string list
   Retourne la liste de tous les mots présents dans un dictionnaire T9.
   Paramètre :
     - Noeud(liste_mot, liste_touche_dico) : dictionnaire à parcourir.
-      • liste_mot : mots au nœud courant.
-      • liste_touche_dico : liste de paires (touche, sous-dictionnaire).
+      - liste_mot : mots au nœud courant.
+      - liste_touche_dico : liste de paires (touche, sous-dictionnaire).
   Résultat :
     - Une liste contenant tous les mots du dictionnaire, récursivement.
-  Post-condition :
+  Post-conditions :
     - L’ordre n’est pas garanti.
     - Tous les mots sont inclus sans doublon (si le dictionnaire est bien construit).
-    - Fonction pure, aucun effet de bord.
 *)
 
 let rec lister (Noeud (liste_mot, liste_touche_dico)) =
@@ -645,20 +606,17 @@ let%test _ = List.length dico_test_list_stp = 5
 
   Résultat :
     - Une liste de mots du dictionnaire dont le chemin de touches correspond à
-      la séquence donnée, à exactement `n` erreurs près.
+      la séquence donnée, à exactement 'n' erreurs près.
 
   Pré-conditions :
-    - n ≥ 0.
-    - Les touches de la liste sont des entiers simulant des pressions valides.
+    - n >= 0.
+    - Les touches de la liste sont des entiers simulant des appuis valides.
     - Le dictionnaire est bien construit.
 
   Post-conditions :
     - Tous les mots retournés sont présents dans le dictionnaire.
-    - Tous les mots ont une longueur de touches égale à celle de `liste_touche`.
-    - Chaque mot est accessible via un chemin dans l’arbre avec exactement `n` divergences par rapport à `liste_touche`.
-
-  Exceptions :
-    - Aucune. Fonction pure et tolérante à l'erreur.
+    - Tous les mots ont une longueur de touches égale à celle de 'liste_touche'.
+    - Chaque mot est accessible via un chemin dans l’arbre avec exactement 'n' divergences par rapport à 'liste_touche'.
 *)
 
 let rec proche (Noeud (liste_mot, liste_touche_dico)) liste_touche n =
@@ -666,13 +624,22 @@ let rec proche (Noeud (liste_mot, liste_touche_dico)) liste_touche n =
   else 
     match liste_touche with
       | [] -> if n = 0 then liste_mot
-        else []
+              else []
       | next_touche::q_touche -> match liste_touche_dico with
         | [] -> []
         | (touche_t, dico_t)::q_touche_dico -> 
           if (touche_t=next_touche) then (proche dico_t q_touche n) @ (proche (Noeud (liste_mot, q_touche_dico)) liste_touche n)
           else (proche dico_t q_touche (n-1)) @ (proche (Noeud (liste_mot, q_touche_dico)) liste_touche n)
 
+(*
+  test2.txt contient les mots suivants :
+  - bonbon
+  - vendre
+  - tendre
+  - cheval
+  - bon
+  - ton
+*)
 let dico_test2_t9 = creer_dico t9_map "test2.txt"
 let proche_bonbon5 = proche dico_test2_t9 (encoder_mot t9_map "bonbon") 5  
 
