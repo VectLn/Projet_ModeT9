@@ -356,25 +356,22 @@ let%test _ = supprimer t9_map (ajouter t9_map empty "mael") "mael" = empty
 let%test _ = appartient t9_map (supprimer t9_map dico_fr_t9 "abricot") "abricot" = false
 
 (*
+  Définition de la cohérence :
+  - Un mot stocké dans un nœud doit être encodable via 'encoder_mot', 
+    et le résultat doit être égal à la séquence de touches 
+    correspondant au chemin depuis la racine jusqu’à ce nœud.
+
   coherent : encodage -> dico -> bool
   Vérifie si un dictionnaire est cohérent pour un encodage donné.
-
   Paramètre encodage : liste associative représentant le clavier (touche, lettres associées)
   Paramètre dico : dictionnaire T9 (type dico)
-
   Résultat :
     - true si le dictionnaire est cohérent (chaque mot correspond à son chemin)
     - false sinon
-
-  Définition de la cohérence :
-    - Un mot stocké dans un nœud doit être encodable via 'encoder_mot', 
-      et le résultat doit être égal à la séquence de touches 
-      correspondant au chemin depuis la racine jusqu’à ce nœud.
-
   Post-conditions :
     - Tous les mots de chaque nœud respectent le chemin de touches menant à ce nœud
     - Si un seul mot est mal placé, la fonction retourne 'false'
-
+    
   Implémentation :
     - Un accumulateur 'parcouru' garde la trace du chemin depuis la racine
     - On vérifie que pour chaque mot, 'List.rev (encoder_mot encodage mot) = parcouru'
